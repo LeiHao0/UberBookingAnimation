@@ -17,14 +17,16 @@ let m2 = CLLocationCoordinate2D(latitude: 1.299943, longitude: 103.855426)
 let m3 = CLLocationCoordinate2D(latitude: 1.272613, longitude: 103.837920)
 
 
-
 let fromDistance: CLLocationDistance = 6000
+let rangeDistance: CLLocationDistance =  1000
 let pitch: CGFloat = 60
 let heading: CLLocationDirection = 180
 
 class MainViewController: UIViewController {
     
-    let mkCamera = MKMapCamera(lookingAtCenter: center, fromDistance: 1000, pitch: 0, heading: 0)
+    let mkCamera = MKMapCamera(lookingAtCenter: center, fromDistance: rangeDistance, pitch: 0, heading: 0)
+    
+    var coordinates = [[m1], [m2], [m3]]
     
     let circleLayer = CAShapeLayer()
     let pinLayer = CAShapeLayer()
@@ -33,7 +35,6 @@ class MainViewController: UIViewController {
     var routes = [MKRoute(), MKRoute(), MKRoute()]
     
     var timer: Timer?
-    
     
     @IBOutlet weak var mapView: MKMapView!
     @IBOutlet weak var maskView: UIView!
@@ -45,9 +46,9 @@ class MainViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        mapView.setCamera(mkCamera, animated: false)
+        searchNearbyCoordinates()
         
-        searchRoute()
+        mapView.setCamera(mkCamera, animated: false)
     }
     
     
@@ -67,6 +68,7 @@ class MainViewController: UIViewController {
         }
         
         timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] timer in
+            self?.searchRoute()
             self?.showRoute()
         }
     }
@@ -90,8 +92,22 @@ class MainViewController: UIViewController {
         
     }
     
-    func searchRoute() {
+    func searchNearbyCoordinates() {
         [m1, m2, m3].enumerated().forEach { i, v in
+            let req = MKLocalSearch.Request()
+            req.naturalLanguageQuery = "mrt"
+            req.region = MKCoordinateRegion(center: v, latitudinalMeters: 200, longitudinalMeters: 200)
+            let localSearch = MKLocalSearch(request: req)
+            localSearch.start { [weak self] (response, error) in
+                guard error == nil else { return }
+                self?.coordinates[i] = response?.mapItems.compactMap({$0.placemark.coordinate}) ?? []
+                self?.searchRoute()
+            }
+        }
+    }
+    
+    func searchRoute() {
+        coordinates.map{$0.randomElement()!}.enumerated().forEach { i, v in
             let req = MKDirections.Request()
             req.source = MKMapItem(placemark: MKPlacemark(coordinate: v))
             req.destination = MKMapItem(placemark: MKPlacemark(coordinate: center))
@@ -108,10 +124,9 @@ class MainViewController: UIViewController {
     }
     
     func showRoute(_ remove: Bool = false) {
-        
         routes.forEach {
 //            print($0.polyline.coordinates.count)
-            animate(route: $0.polyline.coordinates , duration: 1.8)
+            animate(route: $0.polyline.coordinates , duration: 2)
         }
         
     }
