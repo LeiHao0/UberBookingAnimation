@@ -5,7 +5,7 @@ I'm so curious how Uber did when waiting to book a car, so I do some exploration
 
 ## Preview
 
-![](https://github.com/Artwalk/UberBookingAnimation/blob/master/UberBookingAnimation.mp4)
+![](https://i.imgur.com/uXqK2kC.gif)
 
 
 
