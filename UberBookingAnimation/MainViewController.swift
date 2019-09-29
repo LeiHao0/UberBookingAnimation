@@ -32,6 +32,8 @@ class MainViewController: UIViewController {
     private var drawingTimer: Timer?
     var routes = [MKRoute(), MKRoute(), MKRoute()]
     
+    var timer: Timer?
+    
     
     @IBOutlet weak var mapView: MKMapView!
     @IBOutlet weak var maskView: UIView!
@@ -64,14 +66,15 @@ class MainViewController: UIViewController {
             }, completion: nil)
         }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            self.showRoute()
+        timer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] timer in
+            self?.showRoute()
         }
-        
     }
     
     
     @IBAction func resetAction(_ sender: UIButton) {
+        
+        timer?.invalidate()
         
         UIView.animate(withDuration: 1, animations: {
             self.mapView.setCamera(self.mkCamera, animated: true)
@@ -108,7 +111,7 @@ class MainViewController: UIViewController {
         
         routes.forEach {
 //            print($0.polyline.coordinates.count)
-            animate(route: $0.polyline.coordinates , duration: 2)
+            animate(route: $0.polyline.coordinates , duration: 1.8)
         }
         
     }
@@ -116,7 +119,7 @@ class MainViewController: UIViewController {
     func animate(route: [CLLocationCoordinate2D], duration: TimeInterval, completion: (() -> Void)? = nil) {
         guard route.count > 0 else { return }
         var currentStep = 0
-        let delta = 20, opt = 2.0
+        let delta = 20, opt = 3.0
         let totalSteps = route.count + delta
         let stepDrawDur = duration / TimeInterval(totalSteps) * opt
         var prePolyline: MKPolyline?
@@ -169,7 +172,7 @@ extension MainViewController {
     
     func setUpLayers() {
         
-        circleLayer.lineWidth = 1
+        circleLayer.lineWidth = 1.5
         circleLayer.strokeColor = UIColor.white.cgColor
         circleLayer.fillColor = UIColor.clear.cgColor
         circleLayer.path = UIBezierPath(ovalIn: circleView.bounds).cgPath
@@ -215,7 +218,7 @@ extension MainViewController: MKMapViewDelegate {
         if let overlay = overlay as? MKPolyline {
             let polyline = MKPolylineRenderer(overlay: overlay)
             polyline.strokeColor = .white
-            polyline.lineWidth = 1
+            polyline.lineWidth = 1.5
             return polyline
         }
         
