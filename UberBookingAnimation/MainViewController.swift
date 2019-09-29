@@ -12,9 +12,11 @@ import MapKit
 
 
 let center = CLLocationCoordinate2D(latitude: 1.2806521, longitude: 103.848609)
-let m1 = CLLocationCoordinate2D(latitude: 1.277619, longitude: 103.852169)
-let m2 = CLLocationCoordinate2D(latitude: 1.296770, longitude: 103.851010)
-let m3 = CLLocationCoordinate2D(latitude: 1.265631, longitude: 103.822344)
+let m1 = CLLocationCoordinate2D(latitude: 1.278015, longitude: 103.858439)
+let m2 = CLLocationCoordinate2D(latitude: 1.299943, longitude: 103.855426)
+let m3 = CLLocationCoordinate2D(latitude: 1.272613, longitude: 103.837920)
+
+
 
 let fromDistance: CLLocationDistance = 6000
 let pitch: CGFloat = 60
@@ -51,7 +53,6 @@ class MainViewController: UIViewController {
         
         UIView.animate(withDuration: 1) {
             self.maskView.isHidden = false
-//            self.maskView.alpha = 0.6
         }
         
         UIView.animate(withDuration: 1, delay: 0, options: .curveEaseInOut, animations: {
@@ -65,10 +66,6 @@ class MainViewController: UIViewController {
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             self.showRoute()
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
-            self.showRoute(true)
         }
         
     }
@@ -91,130 +88,65 @@ class MainViewController: UIViewController {
     }
     
     func searchRoute() {
-//        [m1, m2, m3]
-            [m1]
-            .enumerated().forEach { i, v in
-            let directionRequest = MKDirections.Request()
-            directionRequest.source = MKMapItem(placemark: MKPlacemark(coordinate: v))
-            directionRequest.destination = MKMapItem(placemark: MKPlacemark(coordinate: center))
-            directionRequest.transportType = .automobile
+        [m1, m2, m3].enumerated().forEach { i, v in
+            let req = MKDirections.Request()
+            req.source = MKMapItem(placemark: MKPlacemark(coordinate: v))
+            req.destination = MKMapItem(placemark: MKPlacemark(coordinate: center))
+            req.transportType = .automobile
             
-            let directions = MKDirections(request: directionRequest)
+            let directions = MKDirections(request: req)
             
             directions.calculate { (r, e) in
                 guard let r = r else {  return }
                 self.routes[i] = r.routes[0]
+//                print("route \(i) done")
             }
         }
     }
     
     func showRoute(_ remove: Bool = false) {
         
-        //        routes[0]
-//        mapView.addOverlays(routes.map({$0.polyline}), level: .aboveLabels)
-       
         routes.forEach {
-            if (remove) {
-                animateRemove(route: $0.polyline.coordinates , duration: 1) {
-                    
-                }
-            } else {
-                animate(route: $0.polyline.coordinates , duration: 1) {
-                    
-                }
-            }
+//            print($0.polyline.coordinates.count)
+            animate(route: $0.polyline.coordinates , duration: 2)
         }
-        
         
     }
     
-    
-    var polyline: MKPolyline!
-    func animateRemove(route: [CLLocationCoordinate2D], duration: TimeInterval, completion: (() -> Void)?) {
+    func animate(route: [CLLocationCoordinate2D], duration: TimeInterval, completion: (() -> Void)? = nil) {
         guard route.count > 0 else { return }
-        var currentStep = 1
-        let totalSteps = route.count
-        let stepDrawDuration = duration/TimeInterval(totalSteps)
-        var previousSegment: MKPolyline?
+        var currentStep = 0
+        let delta = 20, opt = 2.0
+        let totalSteps = route.count + delta
+        let stepDrawDur = duration / TimeInterval(totalSteps) * opt
+        var prePolyline: MKPolyline?
         
-        drawingTimer = Timer.scheduledTimer(withTimeInterval: stepDrawDuration, repeats: true) { [weak self] timer in
+        drawingTimer = Timer.scheduledTimer(withTimeInterval: stepDrawDur, repeats: true) { [weak self] timer in
+            defer { completion?() }
             guard let self = self else {
-                // Invalidate animation if we can't retain self
                 timer.invalidate()
-                completion?()
                 return
             }
             
-            if let previous = previousSegment {
-                // Remove last drawn segment if needed.
+            if let previous = prePolyline {
                 self.mapView.removeOverlay(previous)
-                previousSegment = nil
+                prePolyline = nil
             }
             
-            guard currentStep < totalSteps else {
-                // If this is the last animation step...
-                let finalPolyline = MKPolyline(coordinates: route, count: route.count)
-                finalPolyline.title = "remove"
-                self.mapView.addOverlay(finalPolyline)
-                // Assign the final polyline instance to the class property.
-                self.polyline = finalPolyline
+            if currentStep > totalSteps {
                 timer.invalidate()
-                completion?()
                 return
             }
             
-            // Animation step.
-            // The current segment to draw consists of a coordinate array from 0 to the 'currentStep' taken from the route.
-            let subCoordinates = Array(route.prefix(upTo: currentStep))
-            let currentSegment = MKPolyline(coordinates: subCoordinates, count: subCoordinates.count)
-            currentSegment.title = "remove"
-            self.mapView.addOverlay(currentSegment)
+            let start = currentStep-delta < 0 ? 0 : currentStep-delta
+            let end = currentStep > route.count ? route.count : currentStep
             
-            previousSegment = currentSegment
-            currentStep += 1
-        }
-    }
-    
-    func animate(route: [CLLocationCoordinate2D], duration: TimeInterval, completion: (() -> Void)?) {
-        guard route.count > 0 else { return }
-        var currentStep = 1
-        let totalSteps = route.count
-        let stepDrawDuration = duration/TimeInterval(totalSteps)
-        var previousSegment: MKPolyline?
-        
-        drawingTimer = Timer.scheduledTimer(withTimeInterval: stepDrawDuration, repeats: true) { [weak self] timer in
-            guard let self = self else {
-                // Invalidate animation if we can't retain self
-                timer.invalidate()
-                completion?()
-                return
-            }
-            
-            if let previous = previousSegment {
-                // Remove last drawn segment if needed.
-                self.mapView.removeOverlay(previous)
-                previousSegment = nil
-            }
-            
-            guard currentStep < totalSteps else {
-                // If this is the last animation step...
-                let finalPolyline = MKPolyline(coordinates: route, count: route.count)
-                self.mapView.addOverlay(finalPolyline)
-                // Assign the final polyline instance to the class property.
-                self.polyline = finalPolyline
-                timer.invalidate()
-                completion?()
-                return
-            }
-            
-            // Animation step.
-            // The current segment to draw consists of a coordinate array from 0 to the 'currentStep' taken from the route.
-            let subCoordinates = Array(route.prefix(upTo: currentStep))
+            let subCoordinates = Array(route[start..<end])
             let currentSegment = MKPolyline(coordinates: subCoordinates, count: subCoordinates.count)
             self.mapView.addOverlay(currentSegment)
             
-            previousSegment = currentSegment
-            currentStep += 1
+            prePolyline = currentSegment
+            currentStep += Int(opt)
         }
     }
     
@@ -225,9 +157,9 @@ public extension MKMultiPoint {
     var coordinates: [CLLocationCoordinate2D] {
         var coords = [CLLocationCoordinate2D](repeating: kCLLocationCoordinate2DInvalid,
                                               count: pointCount)
-
+        
         getCoordinates(&coords, range: NSRange(location: 0, length: pointCount))
-
+        
         return coords
     }
 }
@@ -282,14 +214,8 @@ extension MainViewController: MKMapViewDelegate {
         
         if let overlay = overlay as? MKPolyline {
             let polyline = MKPolylineRenderer(overlay: overlay)
-            if overlay.title == "remove" {
-                polyline.strokeColor = #colorLiteral(red: 0.2522767484, green: 0.266956836, blue: 0.2797476053, alpha: 1)
-                polyline.lineWidth = 2
-            } else {
-                polyline.strokeColor = .white
-                polyline.lineWidth = 2
-            }
-
+            polyline.strokeColor = .white
+            polyline.lineWidth = 1
             return polyline
         }
         
