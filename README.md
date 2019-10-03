@@ -1,17 +1,4 @@
-# UberBookingAnimation
-
-
-I'm so curious how Uber did when waiting to book a car, so I do some exploration
-
-## Preview
-
-![](https://i.imgur.com/uXqK2kC.gif)
-
-
-
-## What I found about MapKit
-
-TODO:
+# [UberBookingAnimation](https://artwalk.github.io/2019/10/03/Uber-Booking-Animation/)
 
 - Rotate Map
 - Pin Animation
