@@ -26,7 +26,7 @@ class MainViewController: UIViewController {
     
     let mkCamera = MKMapCamera(lookingAtCenter: center, fromDistance: rangeDistance, pitch: 0, heading: 0)
     
-    var coordinates = [[m1], [m2], [m3]]
+    var coordinates = [CLLocationCoordinate2D]()
     
     let circleLayer = CAShapeLayer()
     let pinLayer = CAShapeLayer()
@@ -54,16 +54,16 @@ class MainViewController: UIViewController {
     
     @IBAction func rotate(_ sender: UIButton) {
         
-        UIView.animate(withDuration: 1) {
-            self.maskView.isHidden = false
+        UIView.animate(withDuration: 1) { [weak self] in
+            self?.maskView.isHidden = false
         }
         
-        UIView.animate(withDuration: 1, delay: 0, options: .curveEaseInOut, animations: {
-            self.mapView.setCamera(MKMapCamera(lookingAtCenter: center, fromDistance: fromDistance, pitch: pitch, heading: 0), animated: true)
+        UIView.animate(withDuration: 1, delay: 0, options: .curveEaseInOut, animations: {  [weak self] in
+            self?.mapView.setCamera(MKMapCamera(lookingAtCenter: center, fromDistance: fromDistance, pitch: pitch, heading: 0), animated: true)
         }) { b in
             self.pinAnimation()
-            UIView.animate(withDuration: 180, delay: 0, options: [.curveLinear, .autoreverse], animations: {
-                self.mapView.setCamera(MKMapCamera(lookingAtCenter: center, fromDistance: fromDistance, pitch: pitch, heading: heading), animated: true)
+            UIView.animate(withDuration: 180, delay: 0, options: [.curveLinear, .autoreverse], animations: {  [weak self] in
+                self?.mapView.setCamera(MKMapCamera(lookingAtCenter: center, fromDistance: fromDistance, pitch: pitch, heading: heading), animated: true)
             }, completion: nil)
         }
         
@@ -78,11 +78,11 @@ class MainViewController: UIViewController {
         
         timer?.invalidate()
         
-        UIView.animate(withDuration: 1, animations: {
+        UIView.animate(withDuration: 1, animations: {  [weak self] in
+            guard let self = self else { return }
             self.mapView.setCamera(self.mkCamera, animated: true)
             self.maskView.alpha = 0
         }) { _ in
-            
             self.maskView.isHidden = true
         }
         
@@ -93,21 +93,21 @@ class MainViewController: UIViewController {
     }
     
     func searchNearbyCoordinates() {
-        [m1, m2, m3].enumerated().forEach { i, v in
-            let req = MKLocalSearch.Request()
-            req.naturalLanguageQuery = "mrt"
-            req.region = MKCoordinateRegion(center: v, latitudinalMeters: 200, longitudinalMeters: 200)
-            let localSearch = MKLocalSearch(request: req)
-            localSearch.start { [weak self] (response, error) in
-                guard error == nil else { return }
-                self?.coordinates[i] = response?.mapItems.compactMap({$0.placemark.coordinate}) ?? []
-                self?.searchRoute()
-            }
+        let req = MKLocalSearch.Request()
+        req.naturalLanguageQuery = "mrt"
+        req.region = MKCoordinateRegion(center: center, latitudinalMeters: 3000, longitudinalMeters: 3000)
+        let localSearch = MKLocalSearch(request: req)
+        localSearch.start { [weak self] (response, error) in
+            guard error == nil else { return }
+            self?.coordinates = response?.mapItems.compactMap({$0.placemark.coordinate}).filter({
+                MKMapPoint($0).distance(to: MKMapPoint(center)) > 1000
+            }) ?? [m1, m2, m3]
+            self?.searchRoute()
         }
     }
     
     func searchRoute() {
-        coordinates.map{$0.randomElement()!}.enumerated().forEach { i, v in
+        coordinates.shuffled()[0..<3].enumerated().forEach { [weak self] i, v in
             let req = MKDirections.Request()
             req.source = MKMapItem(placemark: MKPlacemark(coordinate: v))
             req.destination = MKMapItem(placemark: MKPlacemark(coordinate: center))
@@ -117,16 +117,14 @@ class MainViewController: UIViewController {
             
             directions.calculate { (r, e) in
                 guard let r = r else {  return }
-                self.routes[i] = r.routes[0]
-//                print("route \(i) done")
+                self?.routes[i] = r.routes[0]
             }
         }
     }
     
     func showRoute(_ remove: Bool = false) {
         routes.forEach {
-//            print($0.polyline.coordinates.count)
-            animate(route: $0.polyline.coordinates , duration: 2)
+            animate(route: $0.polyline.coordinates , duration: 1.5)
         }
         
     }
@@ -134,7 +132,7 @@ class MainViewController: UIViewController {
     func animate(route: [CLLocationCoordinate2D], duration: TimeInterval, completion: (() -> Void)? = nil) {
         guard route.count > 0 else { return }
         var currentStep = 0
-        let delta = 20, opt = 3.0
+        let delta = 25, opt = 3.0
         let totalSteps = route.count + delta
         let stepDrawDur = duration / TimeInterval(totalSteps) * opt
         var prePolyline: MKPolyline?
@@ -207,18 +205,18 @@ extension MainViewController {
         self.circleView.transform = CGAffineTransform(scaleX: 0.01, y: 0.01)
         self.circleView.alpha = 1
         
-        UIView.animate(withDuration: 2, delay: 0, options: [.repeat], animations: {
-            self.circleView.transform = CGAffineTransform(scaleX: 1, y: 1)
-            self.circleView.alpha = 0
+        UIView.animate(withDuration: 2, delay: 0, options: [.repeat], animations: { [weak self] in
+            self?.circleView.transform = CGAffineTransform(scaleX: 1, y: 1)
+            self?.circleView.alpha = 0
             
         }, completion: nil)
         
         
         pinView.layer.addSublayer(pinLayer)
-        UIView.animate(withDuration: 1, delay: 0, options: [.curveEaseIn, .repeat, .autoreverse], animations: {
+        UIView.animate(withDuration: 1, delay: 0, options: [.curveEaseIn, .repeat, .autoreverse], animations: {  [weak self] in
             
-            self.pinView.transform = CGAffineTransform(translationX: 0, y: -4)
-            self.pinView.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
+            self?.pinView.transform = CGAffineTransform(translationX: 0, y: -4)
+            self?.pinView.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
             
             
         }, completion: nil)
